@@ -1,0 +1,9 @@
+item {
+  id: 1
+  name: 'edit_text'
+}
+
+item {
+  id: 2
+  name: 'frame'
+}
