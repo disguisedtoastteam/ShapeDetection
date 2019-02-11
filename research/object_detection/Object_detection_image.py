@@ -98,7 +98,7 @@ image_expanded = np.expand_dims(image, axis=0)
     [detection_boxes, detection_scores, detection_classes, num_detections],
     feed_dict={image_tensor: image_expanded})
 
-# trying to zip
+# getting array of results
 reslts = zip(np.squeeze(boxes).tolist(), np.squeeze(scores), np.squeeze(classes))
 resultsList = list(reslts)
 
