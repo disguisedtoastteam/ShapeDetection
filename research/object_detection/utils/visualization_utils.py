@@ -32,6 +32,7 @@ import PIL.ImageDraw as ImageDraw
 import PIL.ImageFont as ImageFont
 import six
 import tensorflow as tf
+from operator import itemgetter
 
 from object_detection.core import standard_fields as fields
 from object_detection.utils import shape_utils
@@ -64,6 +65,25 @@ STANDARD_COLORS = [
     'WhiteSmoke', 'Yellow', 'YellowGreen'
 ]
 
+def parseDetection(prediction):
+  detection = {}
+  detection["box"] = parseBox(prediction[0])
+  detection["score"] = prediction[1]
+  if prediction[2] == 2.0 :
+    detection["class"] = 3.0
+  else:
+    detection["class"] = prediction[2]
+
+  return detection
+
+def parseBox(box):
+  serBox = {}
+  serBox["ymin"] = box[0]
+  serBox["xmin"] = box[1]
+  serBox["ymax"] = box[2]
+  serBox["xmax"] = box[3]
+
+  return serBox
 
 def save_image_array_as_png(image, output_path):
   """Saves an image (represented as a numpy array) to PNG.
@@ -617,6 +637,8 @@ def draw_mask_on_image_array(image, mask, color='red', alpha=0.4):
   pil_image = Image.composite(pil_solid_color, pil_image, pil_mask)
   np.copyto(image, np.array(pil_image.convert('RGB')))
 
+def sortYmin(val): 
+    return val[0]
 
 def visualize_boxes_and_labels_on_image_array(
     image,
@@ -682,6 +704,9 @@ def visualize_boxes_and_labels_on_image_array(
   box_to_instance_masks_map = {}
   box_to_instance_boundaries_map = {}
   box_to_keypoints_map = collections.defaultdict(list)
+
+  firstFrameY = 0
+
   if not max_boxes_to_draw:
     max_boxes_to_draw = boxes.shape[0]
   for i in range(min(max_boxes_to_draw, boxes.shape[0])):
@@ -701,6 +726,11 @@ def visualize_boxes_and_labels_on_image_array(
           if not agnostic_mode:
             if classes[i] in category_index.keys():
               class_name = category_index[classes[i]]['name']
+              ymin, xmin, ymax, xmax = box
+              if class_name == "frame":
+                if firstFrameY != 0 :
+                  class_name = "button"
+                firstFrameY = ymin
             else:
               class_name = 'N/A'
             display_str = str(class_name)
@@ -712,6 +742,9 @@ def visualize_boxes_and_labels_on_image_array(
         box_to_display_str_map[box].append(display_str)
         if agnostic_mode:
           box_to_color_map[box] = 'DarkOrange'
+        elif class_name == "button":
+          box_to_color_map[box] = STANDARD_COLORS[
+              9 % len(STANDARD_COLORS)]
         else:
           box_to_color_map[box] = STANDARD_COLORS[
               classes[i] % len(STANDARD_COLORS)]

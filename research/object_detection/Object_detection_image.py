@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import sys
+import json
 
 # This is needed since the notebook is stored in the object_detection folder.
 sys.path.append("..")
@@ -31,7 +32,7 @@ from utils import visualization_utils as vis_util
 
 # Name of the directory containing the object detection module we're using
 MODEL_NAME = 'inference_graph'
-IMAGE_NAME = 'alone_edit_2.jpg'
+IMAGE_NAME = 'layout_test.jpg'
 
 # Grab path to current working directory
 CWD_PATH = os.getcwd()
@@ -97,8 +98,23 @@ image_expanded = np.expand_dims(image, axis=0)
     [detection_boxes, detection_scores, detection_classes, num_detections],
     feed_dict={image_tensor: image_expanded})
 
-# Draw the results of the detection (aka 'visulaize the results')
+# trying to zip
+reslts = zip(np.squeeze(boxes).tolist(), np.squeeze(scores), np.squeeze(classes))
+resultsList = list(reslts)
 
+results = []
+for result in resultsList:
+    if result[1] > 0.80:
+        results.append(vis_util.parseDetection(result))
+
+results.sort(key=lambda x: x["box"]["ymin"])
+
+frame = next(obj for obj in results if obj["class"] == 3.0)
+frame["class"] = 2.0
+print("\nParsed\n")
+print(results)
+
+# Draw the results of the detection (aka 'visulaize the results')
 vis_util.visualize_boxes_and_labels_on_image_array(
     image,
     np.squeeze(boxes),
