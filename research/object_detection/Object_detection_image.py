@@ -21,18 +21,21 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import sys
-import json
+import simplejson
+from flask import Flask
+from multiprocessing import Process
 
 # This is needed since the notebook is stored in the object_detection folder.
 sys.path.append("..")
 
 # Import utilites
 from utils import label_map_util
-from utils import visualization_utils as vis_util
+#from utils import visualization_utils as vis_util
+from utils import conversion_util as conv_util
 
 # Name of the directory containing the object detection module we're using
 MODEL_NAME = 'inference_graph'
-IMAGE_NAME = 'layout_test.jpg'
+IMAGE_NAME = 'random_layout2.jpg'
 
 # Grab path to current working directory
 CWD_PATH = os.getcwd()
@@ -87,49 +90,69 @@ detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
 # Number of objects detected
 num_detections = detection_graph.get_tensor_by_name('num_detections:0')
 
-# Load image using OpenCV and
-# expand image dimensions to have shape: [1, None, None, 3]
-# i.e. a single-column array, where each item in the column has the pixel RGB value
-image = cv2.imread(PATH_TO_IMAGE)
-image_expanded = np.expand_dims(image, axis=0)
+app = Flask(__name__)
+def index():
+    return "Hello, World!"
 
-# Perform the actual detection by running the model with the image as input
-(boxes, scores, classes, num) = sess.run(
-    [detection_boxes, detection_scores, detection_classes, num_detections],
-    feed_dict={image_tensor: image_expanded})
+@app.route('/<path>')
+def predict(path):
 
-# getting array of results
-reslts = zip(np.squeeze(boxes).tolist(), np.squeeze(scores), np.squeeze(classes))
-resultsList = list(reslts)
+    # Load image using OpenCV and
+    # expand image dimensions to have shape: [1, None, None, 3]
+    # i.e. a single-column array, where each item in the column has the pixel RGB value
+    image = cv2.imread(path)
+    image_expanded = np.expand_dims(image, axis=0)
 
-results = []
-for result in resultsList:
-    if result[1] > 0.80:
-        results.append(vis_util.parseDetection(result))
+    # Perform the actual detection by running the model with the image as input
+    (boxes, scores, classes, num) = sess.run(
+        [detection_boxes, detection_scores, detection_classes, num_detections],
+        feed_dict={image_tensor: image_expanded})
 
-results.sort(key=lambda x: x["box"]["ymin"])
+    # getting array of results
+    reslts = zip(np.squeeze(boxes).tolist(), np.squeeze(scores), np.squeeze(classes))
+    resultsList = list(reslts)
 
-frame = next(obj for obj in results if obj["class"] == 3.0)
-frame["class"] = 2.0
-print("\nParsed\n")
-print(results)
+    results = []
+    for result in resultsList:
+        if result[1] > 0.80:
+            results.append(conv_util.parseDetection(result))
 
-# Draw the results of the detection (aka 'visulaize the results')
-vis_util.visualize_boxes_and_labels_on_image_array(
-    image,
-    np.squeeze(boxes),
-    np.squeeze(classes).astype(np.int32),
-    np.squeeze(scores),
-    category_index,
-    use_normalized_coordinates=True,
-    line_thickness=8,
-    min_score_thresh=0.80)
+    results.sort(key=lambda x: x["box"]["ymin"])
 
-# All the results have been drawn on image. Now display the image.
-cv2.imshow('Object detector', image)
+    frame = next(obj for obj in results if obj["class"] == 3.0)
+    frame["class"] = float(2.0)
+    print("\nParsed\n")
+    print(results)
 
-# Press any key to close the image
-cv2.waitKey(0)
+    # Draw the results of the detection (aka 'visulaize the results')
+    '''
+    vis_util.visualize_boxes_and_labels_on_image_array(
+        image,
+        np.squeeze(boxes),
+        np.squeeze(classes).astype(np.int32),
+        np.squeeze(scores),
+        category_index,
+        use_normalized_coordinates=True,
+        line_thickness=8,
+        min_score_thresh=0.80)
+    '''
 
-# Clean up
-cv2.destroyAllWindows()
+    #p = Process(target=showImage, args=(image,))
+    # you have to set daemon true to not have to wait for the process to join
+    #p.daemon = True
+    #p.start()
+
+    return simplejson.dumps(results)
+
+def showImage(image):
+    # All the results have been drawn on image. Now display the image.
+    cv2.imshow('Object detector', image)
+
+    # Press any key to close the image
+    cv2.waitKey(0)
+
+    # Clean up
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    app.run(host= '0.0.0.0')

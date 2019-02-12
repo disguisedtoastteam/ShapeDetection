@@ -65,26 +65,6 @@ STANDARD_COLORS = [
     'WhiteSmoke', 'Yellow', 'YellowGreen'
 ]
 
-def parseDetection(prediction):
-  detection = {}
-  detection["box"] = parseBox(prediction[0])
-  detection["score"] = prediction[1]
-  if prediction[2] == 2.0 :
-    detection["class"] = 3.0
-  else:
-    detection["class"] = prediction[2]
-
-  return detection
-
-def parseBox(box):
-  serBox = {}
-  serBox["ymin"] = box[0]
-  serBox["xmin"] = box[1]
-  serBox["ymax"] = box[2]
-  serBox["xmax"] = box[3]
-
-  return serBox
-
 def save_image_array_as_png(image, output_path):
   """Saves an image (represented as a numpy array) to PNG.
 
